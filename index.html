@@ -13,6 +13,7 @@
     #timer { font-size: 20px; font-weight: bold; float: right; }
     .button { background: #007bff; color: white; padding: 10px 20px; border: none; cursor: pointer; margin-top: 20px; }
     .button:hover { background: #0056b3; }
+    .question-block { border-bottom: 1px solid #ddd; padding: 15px 0; }
   </style>
 </head>
 <body>
@@ -23,17 +24,7 @@
       <button class="button" onclick="startTest()">Start Test</button>
     </div><div id="quizScreen">
   <div id="timer">Time: 120:00</div>
-  <h2 id="qNo"></h2>
-  <div class="question">
-    <img id="qImage" src="" alt="Question Image" />
-    <ul class="options">
-      <li><input type="radio" name="option" value="0"> <span id="opt0"></span></li>
-      <li><input type="radio" name="option" value="1"> <span id="opt1"></span></li>
-      <li><input type="radio" name="option" value="2"> <span id="opt2"></span></li>
-      <li><input type="radio" name="option" value="3"> <span id="opt3"></span></li>
-    </ul>
-  </div>
-  <button class="button" onclick="nextQuestion()">Next</button>
+  <form id="quizForm"></form>
   <button class="button" onclick="finishTest()">Finish Test</button>
 </div>
 
@@ -46,11 +37,9 @@
     const questions = Array.from({ length: 120 }, (_, i) => ({
       image: `https://via.placeholder.com/600x200?text=Question+${i + 1}`,
       options: ["Option A", "Option B", "Option C", "Option D"],
-      answer: Math.floor(Math.random() * 4) // Random correct option
+      answer: Math.floor(Math.random() * 4)
     }));
 
-    let current = 0;
-    let score = 0;
     let answers = Array(120).fill(null);
     let timer;
     let timeLeft = 120 * 60;
@@ -58,37 +47,39 @@
     function startTest() {
       document.getElementById('startScreen').style.display = 'none';
       document.getElementById('quizScreen').style.display = 'block';
-      showQuestion();
+      loadQuestions();
       timer = setInterval(updateTimer, 1000);
     }
 
-    function showQuestion() {
-      const q = questions[current];
-      document.getElementById('qNo').innerText = `Question ${current + 1}`;
-      document.getElementById('qImage').src = q.image;
-      q.options.forEach((opt, idx) => {
-        document.getElementById(`opt${idx}`).innerText = opt;
-        document.querySelector(`input[value='${idx}']`).checked = (answers[current] === idx);
+    function loadQuestions() {
+      const form = document.getElementById('quizForm');
+      form.innerHTML = '';
+      questions.forEach((q, idx) => {
+        const block = document.createElement('div');
+        block.className = 'question-block';
+        block.innerHTML = `
+          <h3>Question ${idx + 1}</h3>
+          <img src="${q.image}" alt="Question ${idx + 1}"><br>
+          <ul class="options">
+            ${q.options.map((opt, optIdx) => `
+              <li>
+                <label><input type="radio" name="q${idx}" value="${optIdx}"> ${opt}</label>
+              </li>
+            `).join('')}
+          </ul>
+        `;
+        form.appendChild(block);
       });
     }
 
-    function nextQuestion() {
-      saveAnswer();
-      if (current < questions.length - 1) {
-        current++;
-        showQuestion();
-      }
-    }
-
-    function saveAnswer() {
-      const selected = document.querySelector('input[name="option"]:checked');
-      if (selected) answers[current] = parseInt(selected.value);
-    }
-
     function finishTest() {
-      saveAnswer();
       clearInterval(timer);
-      score = answers.reduce((acc, val, idx) => val === questions[idx].answer ? acc + 1 : acc, 0);
+      const form = document.forms['quizForm'];
+      questions.forEach((q, idx) => {
+        const selected = form[`q${idx}`].value;
+        answers[idx] = selected ? parseInt(selected) : null;
+      });
+      const score = answers.reduce((acc, val, idx) => val === questions[idx].answer ? acc + 1 : acc, 0);
       document.getElementById('quizScreen').style.display = 'none';
       document.getElementById('resultScreen').style.display = 'block';
       document.getElementById('score').innerText = score;
